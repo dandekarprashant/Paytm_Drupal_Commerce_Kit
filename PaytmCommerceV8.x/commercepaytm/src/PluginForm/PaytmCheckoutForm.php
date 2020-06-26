@@ -30,6 +30,12 @@ class PaytmCheckoutForm extends BasePaymentOffsiteForm {
 
 				$order_id = \Drupal::routeMatch()->getParameter('commerce_order')->id();
 				$order = Order::load($order_id);
+				// Make Paytm Remote Order ID unique by attaching timestamp to order id
+				$ordtime=\Drupal::time()
+                    		->getRequestTime();
+                		$unqorder_id = $order_id . '_' . $ordtime;
+                		// time stamp attachment to paytm order id
+				
 				$user_id = \Drupal::currentUser()->id();
 				$address = $order->getBillingProfile()->address->first();
 				// $mode = $payment_gateway_plugin->getConfiguration()['pmode'];
@@ -49,7 +55,7 @@ class PaytmCheckoutForm extends BasePaymentOffsiteForm {
 					}
 				}
 				$paramList["MID"] = $merchant_id;
-				$paramList["ORDER_ID"] = $order_id;
+				$paramList["ORDER_ID"] = $unqorder_id;
 				$paramList["CUST_ID"] = $user_id;
 				$paramList["INDUSTRY_TYPE_ID"] = 'Retail';
 				$paramList["CHANNEL_ID"] = 'WEB';
