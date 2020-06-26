@@ -21,6 +21,9 @@ use Drupal\commercepaytm\PaytmLibrary;
 use Drupal\commerce_order\Entity\Order;
 use Drupal\Component\Utility\Crypt;
 
+
+
+
 /**
  * Provides the Paytm payment gateway.
  *
@@ -163,6 +166,7 @@ class PaytmCheckout extends OffsitePaymentGatewayBase {
         $paramlist['MID']          = $request->get('MID');
         $paramlist['TXNAMOUNT']    = $request->get('TXNAMOUNT');
         $paramlist['ORDERID']      = $txnid;
+        $paramlist['REMOTEID']     = $request->get('ORDERID');
         $paramlist['CHECKSUMHASH'] = $request->get('CHECKSUMHASH');
         $valid_checksum = $paytm_library->verifychecksum_e($paramlist, $this->configuration['merchant_key'], $paramlist['CHECKSUMHASH']);
         if($valid_checksum) {
@@ -175,19 +179,25 @@ class PaytmCheckout extends OffsitePaymentGatewayBase {
                     'payment_gateway' => $this->entityId,
                     'order_id' => $order->id(),
                     'test' => $this->getMode() == 'test',
-                    'remote_id' => $order->id(),
+                    'remote_id' => $paramlist['REMOTEID'],
                     'remote_state' => $paramlist['STATUS'],
                     'authorized' => $this->time->getRequestTime(),
                 ]);
                 $payment->save();
-                drupal_set_message($this->t('Your payment was successful with Order id : @orderid and Transaction id : @transaction_id', ['@orderid' => $order->id(), '@transaction_id' => $txnid]));
+                
+                \Drupal::messenger()->addStatus(t('Your payment was successful, your Order ID is %orderid and Transaction ID is %transaction_id.', ['%orderid' => $order->id(), '%transaction_id' => $txnid]));
             }
             else {
-                drupal_set_message($this->t('Transaction Failed'), 'error');
+                $errmsg=$request->get('RESPMSG');
+                \Drupal::messenger()->addError(t('Transaction Failed: %msgtxt.', ['%msgtxt' => $errmsg]));
+                throw new PaymentGatewayException("Payment Failed");
             }
         }
         else {
-            drupal_set_message($this->t('Checksum mismatched.'), 'error');
+            \Drupal::messenger()->addError('Checksum Mismatched.');
         }
     }
+
+
+
 }
